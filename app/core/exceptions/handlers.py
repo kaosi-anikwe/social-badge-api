@@ -40,7 +40,14 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         )
 
     if isinstance(exc, SQLAlchemyError):
-        logger.error(f"SQLAlchemyError -> {exc_type}: {exc_msg}")
+        exc_orig = getattr(exc, "orig", None)
+
+        logger.opt(exception=True).error(
+            "SQLAlchemyError -> {} | sanitized={} | orig={}",
+            exc_type,
+            exc_msg,
+            data_sanitizer.sanitize_exception_for_logging(exc_orig),
+        )
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(message="A database error occurred").model_dump(),

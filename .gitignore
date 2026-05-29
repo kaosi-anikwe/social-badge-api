@@ -176,8 +176,10 @@ jeff.py
 
 **/.DS_Store
 
-.vscode
 public/
 
 .ruff_cache/
 logs/
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat

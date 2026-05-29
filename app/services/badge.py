@@ -10,7 +10,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.config import settings
 from app.core.exceptions import (
     BadgeAlreadyPublishedError,
     BadgeNotFoundError,
@@ -99,35 +98,42 @@ async def publish_badge(
     organiser_id: UUID,
     id: UUID,
 ) -> Badge:
-    result = await session.execute(select(Badge).where(Badge.id == id))
-    template = result.scalars().first()
-    if template is None or template.deleted_at is not None:
+    result = await session.execute(
+        select(Badge).where(
+            Badge.id == id,
+            Badge.deleted_at.is_(None),
+        )
+    )
+    badge = result.scalars().first()
+
+    if not badge:
         raise BadgeNotFoundError
-    if template.organiser_id != organiser_id:
+    if badge.organiser_id != organiser_id:
         raise NotBadgeOwnerError
-    if template.is_published:
+    if badge.is_published:
         raise BadgeAlreadyPublishedError
 
-    now = datetime.now(UTC)
-    if template.share_slug is None:
-        for _ in range(settings.MAX_SLUG_RETRIES):
-            template.is_published = True
-            template.published_at = now
-            template.share_slug = generate_share_slug()
-            try:
-                await session.flush()
-                break
-            except IntegrityError:
-                await session.rollback()
-                continue
-        else:
-            raise RuntimeError("Could not generate a unique share slug")
+    badge.is_published = True
+    badge.published_at = datetime.now(UTC)
 
-    await session.commit()
-    await session.refresh(template)
+    if not badge.share_slug:
+        badge.share_slug = generate_share_slug()
 
-    logger.info("Published template %s by organiser %s", template.id, organiser_id)
-    return template
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise
+
+    await session.refresh(badge)
+
+    logger.info(
+        "Published badge %s by organiser %s",
+        badge.id,
+        organiser_id,
+    )
+
+    return badge
 
 
 async def unpublish_badge(

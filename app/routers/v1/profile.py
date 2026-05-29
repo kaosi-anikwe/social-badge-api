@@ -100,7 +100,7 @@ async def _read_file_with_size_check(file: UploadFile, max_size: int) -> bytes:
 
 
 @router.get(
-    "/",
+    "",
     response_model=SuccessResponse[UserResponse],
     status_code=status.HTTP_200_OK,
     summary="Get current user profile",
@@ -124,7 +124,7 @@ async def get_profile(
 
 
 @router.put(
-    "/",
+    "",
     response_model=SuccessResponse[UserResponse],
     status_code=status.HTTP_200_OK,
     summary="Update user profile",
@@ -182,7 +182,7 @@ async def update_user_profile(
 
 
 @router.delete(
-    "/",
+    "",
     response_model=SuccessResponse[DeleteProfileResponse],
     status_code=status.HTTP_200_OK,
     summary="Delete user profile",
